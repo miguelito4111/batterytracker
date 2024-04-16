@@ -2,23 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:intl/intl.dart'; // Import for date formatting
 
 class AppUsageInfo {
   final String packageName;
-  final DateTime lastTimeUsed;
+  final int lastTimeUsed;
   final int totalTimeForeground;
 
-  AppUsageInfo(
-      {required this.packageName,
-      required this.lastTimeUsed,
-      required this.totalTimeForeground});
+  AppUsageInfo({
+    required this.packageName,
+    required this.lastTimeUsed,
+    required this.totalTimeForeground,
+  });
 
   factory AppUsageInfo.fromJson(Map<String, dynamic> json) {
-    final lastUsed = int.tryParse(json['LastTimeUsed']) ?? 0;
     return AppUsageInfo(
       packageName: json['Pkg'],
-      lastTimeUsed: DateTime.fromMillisecondsSinceEpoch(lastUsed),
+      lastTimeUsed: int.parse(json['LastTimeUsed']),
       totalTimeForeground:
           int.parse(json['TotalTimeForeground'].replaceAll(' seconds', '')),
     );
@@ -44,12 +43,10 @@ class _AppDetailsScreenState extends State<AppDetailsScreen> {
   Future<void> getAppUsageDetails() async {
     try {
       final String result = await platform.invokeMethod('getAppUsageStats');
-      List<AppUsageInfo> fetchedDetails = parseUsageData(result);
       setState(() {
-        _usageDetails = fetchedDetails;
+        _usageDetails = parseUsageData(result);
       });
-      fetchIconsForApps(
-          fetchedDetails); // Fetch icons after fetching usage details
+      fetchIconsForApps(_usageDetails);
     } on PlatformException catch (e) {
       print("Failed to get app usage details: '${e.message}'.");
     }
@@ -68,12 +65,11 @@ class _AppDetailsScreenState extends State<AppDetailsScreen> {
 
   Future<String> fetchAppIcon(String packageName) async {
     try {
-      final String iconBase64 = await platform
+      return await platform
           .invokeMethod('getAppIcon', {'packageName': packageName});
-      return iconBase64;
     } on PlatformException catch (e) {
       print("Failed to fetch icon: ${e.message}");
-      return ''; // Return an empty string to indicate failure
+      return '';
     }
   }
 
@@ -108,15 +104,13 @@ class _AppDetailsScreenState extends State<AppDetailsScreen> {
       itemCount: _usageDetails.length,
       itemBuilder: (context, index) {
         final app = _usageDetails[index];
-        final formattedDate =
-            DateFormat('yyyy-MM-dd HH:mm:ss').format(app.lastTimeUsed);
         return ListTile(
           leading: _icons[app.packageName]?.isEmpty ?? true
               ? Icon(Icons.error)
               : buildIcon(_icons[app.packageName]!),
           title: Text(app.packageName),
           subtitle: Text(
-              'Last Used: $formattedDate, Total Foreground Time: ${app.totalTimeForeground} seconds'),
+              'Last Used: ${DateTime.fromMillisecondsSinceEpoch(app.lastTimeUsed * 1000)}, Total Foreground Time: ${app.totalTimeForeground} seconds'),
         );
       },
     );
@@ -128,7 +122,7 @@ class _AppDetailsScreenState extends State<AppDetailsScreen> {
       return Image.memory(bytes, width: 48, height: 48);
     } catch (e) {
       print("Failed to decode Base64: $e");
-      return Icon(Icons.error); // Display an error icon if decoding fails
+      return Icon(Icons.error);
     }
   }
 }
