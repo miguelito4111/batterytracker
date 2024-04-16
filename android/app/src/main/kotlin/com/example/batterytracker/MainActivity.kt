@@ -17,6 +17,11 @@ import android.provider.Settings
 import android.os.Process
 import android.app.AlertDialog
 import java.util.Calendar
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
+import android.util.Base64
+import java.io.ByteArrayOutputStream
+
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.example.powermonitor/channel"
@@ -27,6 +32,21 @@ class MainActivity: FlutterActivity() {
             showUsageStatsPermissionDialog()
         }
     }
+private fun getIconBase64(packageName: String): String? {
+    try {
+        val pm = packageManager
+        val iconDrawable = pm.getApplicationIcon(packageName)
+        val bitmap = (iconDrawable as BitmapDrawable).bitmap
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        val bytes = outputStream.toByteArray()
+        return Base64.encodeToString(bytes, Base64.NO_WRAP) // Use NO_WRAP to avoid line breaks
+    } catch (e: Exception) {
+        e.printStackTrace()
+        return null
+    }
+}
+
 
     private fun showUsageStatsPermissionDialog() {
         AlertDialog.Builder(this)
@@ -61,9 +81,19 @@ class MainActivity: FlutterActivity() {
                         result.error("NO_STATS", "No usage stats available", null)
                     }
                 }
+                "getAppIcon" -> {
+                    val packageName = call.argument<String>("packageName")
+                    val iconBase64 = getIconBase64(packageName!!)
+                    if (iconBase64 != null) {
+                        result.success(iconBase64)
+                    } else {
+                        result.error("ICON_NOT_FOUND", "Icon not found for package: $packageName", null)
+                    }
+                }
                 else -> result.notImplemented()
-            }
         }
+    }
+
     }
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
@@ -79,15 +109,22 @@ class MainActivity: FlutterActivity() {
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     private fun getAppUsageStats(): String {
-        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val endTime = System.currentTimeMillis()
-        val beginTime = endTime - 1000 * 60 * 60 * 24 * 365 // Last year
-        val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, endTime)
-        return usageStatsList.joinToString(separator = "\n") {
+    val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    val endTime = System.currentTimeMillis()
+    val beginTime = endTime - 1000 * 60 * 60 * 24 * 365 // Last year
+    val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, endTime)
+
+    // Filtering out apps with LastTimeUsed == 0
+    val filteredStats = usageStatsList.filter { it.lastTimeUsed > 0 }
+
+    return if (filteredStats.isEmpty()) {
+        "No usage stats available"
+    } else {
+        filteredStats.joinToString(separator = "\n") {
             "Pkg: ${it.packageName}, LastTimeUsed: ${it.lastTimeUsed}, TotalTimeForeground: ${it.totalTimeInForeground / 1000} seconds"
         }
     }
-
+}
     private fun hasUsageStatsPermission(): Boolean {
         val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), packageName)
