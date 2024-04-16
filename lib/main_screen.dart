@@ -66,7 +66,7 @@ class _MainScreenState extends State<MainScreen> {
           children: <Widget>[
             ElevatedButton(
               onPressed: _getBatteryUsage,
-              child: Text('Get Current batter percentage'),
+              child: Text('Get Current Battery Percentage'),
             ),
             ElevatedButton(
               onPressed: () {

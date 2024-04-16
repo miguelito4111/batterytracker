@@ -24,23 +24,22 @@ class _AppDetailsScreenState extends State<AppDetailsScreen> {
     }
   }
 
-    Widget buildIcon(String base64String) {
-  if (base64String.isEmpty) {
-    return Icon(Icons.error);  // Display an error icon if no icon data
+  Widget buildIcon(String base64String) {
+    if (base64String.isEmpty) {
+      return Icon(Icons.error);  // Display an error icon if no icon data
+    }
+
+    // Ensure all invalid characters are removed
+    String sanitizedBase64 = base64String.replaceAll(RegExp(r'\s+'), '');
+
+    try {
+      Uint8List bytes = base64.decode(sanitizedBase64);
+      return Image.memory(bytes);
+    } catch (e) {
+      print("Failed to decode Base64: $e");
+      return Icon(Icons.error);  // Display an error icon if decoding fails
+    }
   }
-
-  // Ensure all invalid characters are removed
-  String sanitizedBase64 = base64String.replaceAll(RegExp(r'\s+'), '');
-
-  try {
-    Uint8List bytes = base64.decode(sanitizedBase64);
-    return Image.memory(bytes);
-  } catch (e) {
-    print("Failed to decode Base64: $e");
-    return Icon(Icons.error);  // Display an error icon if decoding fails
-  }
-}
-
 
   @override
   void initState() {
@@ -67,22 +66,29 @@ class _AppDetailsScreenState extends State<AppDetailsScreen> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text('App Details'),
-    ),
-    body: SingleChildScrollView(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(_usageDetails),
-          ),
-          _iconBase64.isEmpty ? Icon(Icons.error_outline) : buildIcon(_iconBase64), // Display the icon
-        ],
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'App Details',
+          style: TextStyle(color: Colors.white), // Set app bar title text color to white
+        ),
+        iconTheme: IconThemeData(color: Colors.white), // Set back arrow icon color to white
       ),
-    ),
-  );
-}
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                _usageDetails,
+                style: TextStyle(color: Colors.white), // Set text color to white
+              ),
+            ),
+            _iconBase64.isEmpty ? Icon(Icons.error_outline, color: Colors.white) : buildIcon(_iconBase64), // Display the icon with white color
+          ],
+        ),
+      ),
+    );
+  }
 }
