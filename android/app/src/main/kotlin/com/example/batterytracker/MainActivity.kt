@@ -16,24 +16,23 @@ import android.app.AppOpsManager
 import android.provider.Settings
 import android.os.Process
 import android.app.AlertDialog
+import java.util.Calendar
 
-//be very careful with this code, it can break everything if wrongly messed with
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.example.powermonitor/channel"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Check for permission on activity creation
         if (!hasUsageStatsPermission()) {
             showUsageStatsPermissionDialog()
         }
     }
+
     private fun showUsageStatsPermissionDialog() {
         AlertDialog.Builder(this)
             .setTitle("Usage Access Required")
             .setMessage("This app requires usage access to monitor battery consumption by apps. Please allow this permission in the next screen.")
             .setPositiveButton("OK") { dialog, which ->
-                // Intent to open the usage access settings
                 val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
                 startActivity(intent)
             }
@@ -44,33 +43,49 @@ class MainActivity: FlutterActivity() {
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
-            call, result ->
-            if (call.method == "getBatteryUsage") {
-                val batteryUsage = getBatteryLevel()
-                if (batteryUsage != null) {
-                    result.success(batteryUsage)
-                } else {
-                    result.error("UNAVAILABLE", "Battery usage not available.", null)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getBatteryUsage" -> {
+                    val batteryUsage = getBatteryLevel()
+                    if (batteryUsage != null) {
+                        result.success(batteryUsage)
+                    } else {
+                        result.error("UNAVAILABLE", "Battery usage not available.", null)
+                    }
                 }
-            } else {
-                result.notImplemented()
+                "getAppUsageStats" -> {
+                    val appUsageStats = getAppUsageStats()
+                    if (appUsageStats.isNotEmpty()) {
+                        result.success(appUsageStats)
+                    } else {
+                        result.error("NO_STATS", "No usage stats available", null)
+                    }
+                }
+                else -> result.notImplemented()
             }
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     private fun getBatteryLevel(): String {
-        val batteryLevel: Int
         val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
             applicationContext.registerReceiver(null, ifilter)
         }
-        batteryLevel = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val batteryLevel = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
 
-        val batteryPct = batteryLevel / scale.toFloat() * 100
+        return "Battery level: ${batteryLevel / scale.toFloat() * 100}%"
+    }
 
-        return "Battery level: $batteryPct%"
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    private fun getAppUsageStats(): String {
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val endTime = System.currentTimeMillis()
+        val beginTime = endTime - 1000 * 60 * 60 * 24 * 365 // Last year
+        val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, endTime)
+        return usageStatsList.joinToString(separator = "\n") {
+            "Pkg: ${it.packageName}, LastTimeUsed: ${it.lastTimeUsed}, TotalTimeForeground: ${it.totalTimeInForeground / 1000} seconds"
+        }
     }
 
     private fun hasUsageStatsPermission(): Boolean {
