@@ -58,7 +58,9 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Power Consumption Overview'),
+        title: Text(
+          'Power Consumption Overview',
+        style: TextStyle(color: Colors.white) ),
       ),
       body: Center(
         child: Column(
