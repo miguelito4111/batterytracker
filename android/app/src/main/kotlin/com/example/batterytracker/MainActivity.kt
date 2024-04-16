@@ -21,6 +21,9 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.util.Base64
 import java.io.ByteArrayOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 class MainActivity: FlutterActivity() {
@@ -34,7 +37,7 @@ class MainActivity: FlutterActivity() {
     }
 private fun getIconBase64(packageName: String): String? {
     try {
-        val pm = packageManager
+        val pm = context.packageManager
         val iconDrawable = pm.getApplicationIcon(packageName)
         val bitmap = (iconDrawable as BitmapDrawable).bitmap
         val outputStream = ByteArrayOutputStream()
@@ -61,6 +64,10 @@ private fun getIconBase64(packageName: String): String? {
             .show()
     }
 
+    fun formatDate(millis: Long): String {
+        val formatter = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+        return formatter.format(Date(millis))
+    }
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
@@ -121,7 +128,7 @@ private fun getIconBase64(packageName: String): String? {
         "No usage stats available"
     } else {
         filteredStats.joinToString(separator = "\n") {
-            "Pkg: ${it.packageName}, LastTimeUsed: ${it.lastTimeUsed}, TotalTimeForeground: ${it.totalTimeInForeground / 1000} seconds"
+            "Pkg: ${it.packageName}, LastTimeUsed: ${formatDate(it.lastTimeUsed)}, TotalTimeForeground: ${it.totalTimeInForeground / 1000} seconds"
         }
     }
 }

@@ -40,8 +40,6 @@ class _AppDetailsScreenState extends State<AppDetailsScreen> {
     return Icon(Icons.error);  // Display an error icon if decoding fails
   }
 }
-
-
   @override
   void initState() {
     super.initState();
