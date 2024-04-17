@@ -35,21 +35,21 @@ class MainActivity: FlutterActivity() {
             showUsageStatsPermissionDialog()
         }
     }
-private fun getIconBase64(packageName: String): String? {
-    try {
-        val pm = context.packageManager
-        val iconDrawable = pm.getApplicationIcon(packageName)
-        val bitmap = (iconDrawable as BitmapDrawable).bitmap
-        val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-        val bytes = outputStream.toByteArray()
-        return Base64.encodeToString(bytes, Base64.NO_WRAP) // Use NO_WRAP to avoid line breaks
-    } catch (e: Exception) {
-        e.printStackTrace()
-        return null
-    }
-}
 
+    private fun getIconBase64(packageName: String): String? {
+        try {
+            val pm = context.packageManager
+            val iconDrawable = pm.getApplicationIcon(packageName)
+            val bitmap = (iconDrawable as BitmapDrawable).bitmap
+            val outputStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            val bytes = outputStream.toByteArray()
+            return Base64.encodeToString(bytes, Base64.NO_WRAP) // Use NO_WRAP to avoid line breaks
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
 
     private fun showUsageStatsPermissionDialog() {
         AlertDialog.Builder(this)
@@ -65,9 +65,10 @@ private fun getIconBase64(packageName: String): String? {
     }
 
     fun formatDate(millis: Long): String {
-        val formatter = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
         return formatter.format(Date(millis))
     }
+
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
@@ -98,9 +99,8 @@ private fun getIconBase64(packageName: String): String? {
                     }
                 }
                 else -> result.notImplemented()
+            }
         }
-    }
-
     }
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
@@ -115,23 +115,31 @@ private fun getIconBase64(packageName: String): String? {
     }
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-    private fun getAppUsageStats(): String {
-    val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-    val endTime = System.currentTimeMillis()
-    val beginTime = endTime - 1000 * 60 * 60 * 24 * 365 // Last year
-    val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, endTime)
+    private fun getAppUsageStats(): List<Map<String, Any>> {
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val endTime = System.currentTimeMillis()
+        val beginTime = endTime - 1000 * 60 * 60 * 24 * 365 // Last year
+        val usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, endTime)
 
-    // Filtering out apps with LastTimeUsed == 0
-    val filteredStats = usageStatsList.filter { it.lastTimeUsed > 0 }
-
-    return if (filteredStats.isEmpty()) {
-        "No usage stats available"
-    } else {
-        filteredStats.joinToString(separator = "\n") {
-            "Pkg: ${it.packageName}, LastTimeUsed: ${formatDate(it.lastTimeUsed)}, TotalTimeForeground: ${it.totalTimeInForeground / 1000} seconds"
+        return if (usageStatsList.isEmpty()) {
+            listOf()
+        } else {
+            usageStatsList.filter { it.lastTimeUsed > 0 }
+                .map {
+                    mapOf(
+                        "appName" to it.packageName,
+                        "batteryUsed" to calculateBatteryUsage(it.totalTimeInForeground),
+                        "date" to formatDate(it.lastTimeUsed)
+                    )
+                }
         }
     }
-}
+
+    private fun calculateBatteryUsage(totalForegroundTime: Long): Double {
+        // Calculate battery used based on the time foreground. Example: 0.05% per hour
+        return (totalForegroundTime.toDouble() / 3600000) * 0.05
+    }
+
     private fun hasUsageStatsPermission(): Boolean {
         val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), packageName)

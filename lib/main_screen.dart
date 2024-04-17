@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:battery/battery.dart';
 import 'package:hive/hive.dart';
-import 'battery_data.dart'; // Import battery data model
+import 'battery_data.dart';
 import 'historical_data_screen.dart';
 import 'app_details_screen.dart';
+import 'app_usage_screen.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -34,8 +35,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _getBatteryUsage() async {
     try {
-      final int result =
-          await _battery.batteryLevel; // Using the battery package
+      final int result = await _battery.batteryLevel;
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -46,7 +46,7 @@ class _MainScreenState extends State<MainScreen> {
               TextButton(
                 child: Text('OK'),
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close the pop-up
+                  Navigator.of(context).pop();
                 },
               ),
             ],
@@ -64,7 +64,7 @@ class _MainScreenState extends State<MainScreen> {
               TextButton(
                 child: Text('OK'),
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close the pop-up
+                  Navigator.of(context).pop();
                 },
               ),
             ],
@@ -78,9 +78,8 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Power Consumption Overview',
-        style: TextStyle(color: Colors.white) ),
+        title: Text('Power Consumption Overview',
+            style: TextStyle(color: Colors.white)),
       ),
       body: Center(
         child: Column(
@@ -109,6 +108,15 @@ class _MainScreenState extends State<MainScreen> {
               },
               child: Text('View App Details'),
             ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AppUsageScreen()),
+                );
+              },
+              child: Text('View App Usage Details'),
+            ),
           ],
         ),
       ),
@@ -117,7 +125,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    _batteryBox.close(); // Close the Hive box when not needed
+    _batteryBox.close();
     super.dispose();
   }
 }

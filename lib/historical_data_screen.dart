@@ -12,9 +12,9 @@ class HistoricalDataScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Historical Data',
-          style: TextStyle(color: Colors.white), // Set app bar title text color to white
+          style: TextStyle(color: Colors.white),
         ),
-        iconTheme: IconThemeData(color: Colors.white), // Set back arrow icon color to white
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: ValueListenableBuilder(
         valueListenable: batteryBox.listenable(),
@@ -28,14 +28,13 @@ class HistoricalDataScreen extends StatelessWidget {
               final data = box.getAt(index);
               return ListTile(
                 title: Text(
-              'Date: ${data?.date.toString() ?? 'No date'}',
-              style: TextStyle(color: Colors.white), // Set list tile title text color to white
-            ),
+                  'Date: ${data?.date.toString() ?? 'No date'}',
+                  style: TextStyle(color: Colors.white),
+                ),
                 subtitle: Text(
-              
-                    'Battery Usage: ${data?.batteryPercentage.toStringAsFixed(2) ?? 'No data'}%',
-              style: TextStyle(color: Colors.white), // Set list tile subtitle text color to white
-            ),
+                  'Battery Usage: ${data?.batteryPercentage.toStringAsFixed(2) ?? 'No data'}%',
+                  style: TextStyle(color: Colors.white),
+                ),
               );
             },
           );
