@@ -37,13 +37,13 @@ class MainActivity: FlutterActivity() {
     }
 private fun getIconBase64(packageName: String): String? {
     try {
-        val pm = context.packageManager
+        val pm = applicationContext.packageManager
         val iconDrawable = pm.getApplicationIcon(packageName)
         val bitmap = (iconDrawable as BitmapDrawable).bitmap
         val outputStream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
         val bytes = outputStream.toByteArray()
-        return Base64.encodeToString(bytes, Base64.NO_WRAP) // Use NO_WRAP to avoid line breaks
+        return Base64.encodeToString(bytes, Base64.NO_WRAP)
     } catch (e: Exception) {
         e.printStackTrace()
         return null
@@ -65,7 +65,7 @@ private fun getIconBase64(packageName: String): String? {
     }
 
     fun formatDate(millis: Long): String {
-        val formatter = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+        val formatter = SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault())
         return formatter.format(Date(millis))
     }
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {

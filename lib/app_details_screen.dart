@@ -1,69 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:async'; // Import for Timer
 
 class AppDetailsScreen extends StatefulWidget {
   @override
   _AppDetailsScreenState createState() => _AppDetailsScreenState();
 }
 
+class AppUsageDetails {
+  final String packageName;
+  final String lastTimeUsed;
+  final int totalTimeForeground; // Change to int to represent seconds
+
+  AppUsageDetails({
+    required this.packageName,
+    required this.lastTimeUsed,
+    required this.totalTimeForeground,
+  });
+
+  String get formattedTotalTime {
+    if (totalTimeForeground < 60) {
+      return '$totalTimeForeground seconds';
+    } else if (totalTimeForeground < 3600) {
+      return '${(totalTimeForeground / 60).toStringAsFixed(1)} minutes';
+    } else {
+      return '${(totalTimeForeground / 3600).toStringAsFixed(1)} hours';
+    }
+  }
+}
+
 class _AppDetailsScreenState extends State<AppDetailsScreen> {
   static const platform = MethodChannel('com.example.powermonitor/channel');
-  String _usageDetails = 'Fetching app usage details...';
-  String _iconBase64 = '';
-  String _packageName = 'com.example.batterytracker';
-
-  Future<String> fetchAppIcon(String packageName) async {
-    try {
-      final String iconBase64 = await platform.invokeMethod('getAppIcon', {'packageName': packageName});
-      return iconBase64;
-    } on PlatformException catch (e) {
-      print("Failed to fetch icon: ${e.message}");
-      return ''; // Return an empty string to indicate failure
-    }
-  }
-
-  Widget buildIcon(String base64String) {
-    if (base64String.isEmpty) {
-      return Icon(Icons.error);  // Display an error icon if no icon data
-    }
-
-    // Ensure all invalid characters are removed
-    String sanitizedBase64 = base64String.replaceAll(RegExp(r'\s+'), '');
-
-    try {
-      Uint8List bytes = base64.decode(sanitizedBase64);
-      return Image.memory(bytes);
-    } catch (e) {
-      print("Failed to decode Base64: $e");
-      return Icon(Icons.error);  // Display an error icon if decoding fails
-    }
-  }
+  List<AppUsageDetails> usageDetails = [];
+  Timer? _timer; // Timer to handle periodic updates
 
   @override
   void initState() {
     super.initState();
     getAppUsageDetails();
-    fetchAppIcon(_packageName).then((base64String) {
-      setState(() {
-        _iconBase64 = base64String;
-      });
-    });
+    _startTimer(); // Start the timer on init
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer when the screen is disposed
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 10), (Timer t) => getAppUsageDetails());
+    // Refresh every 10 seconds, adjust the duration according to your needs
   }
 
   Future<void> getAppUsageDetails() async {
-    try {
-      final String result = await platform.invokeMethod('getAppUsageStats');
-      setState(() {
-        _usageDetails = result;
-      });
-    } on PlatformException catch (e) {
-      setState(() {
-        _usageDetails = "Failed to get app usage details: '${e.message}'.";
-      });
-    }
+  try {
+    final String result = await platform.invokeMethod('getAppUsageStats');
+    var lines = result.split('\n');
+    setState(() {
+      usageDetails = lines.map((line) {
+        var parts = line.split(', ');
+        return AppUsageDetails(
+          packageName: parts[0].split(': ')[1],
+          lastTimeUsed: parts[1].split(': ')[1],
+          totalTimeForeground: int.parse(parts[2].split(': ')[1].split(' ')[0]),
+
+        );
+      }).toList();
+    });
+  } on PlatformException catch (e) {
+    print("Failed to get app usage details: ${e.message}");
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -71,23 +79,25 @@ class _AppDetailsScreenState extends State<AppDetailsScreen> {
       appBar: AppBar(
         title: Text(
           'App Details',
-          style: TextStyle(color: Colors.white), // Set app bar title text color to white
+          style: TextStyle(color: Colors.white),
         ),
-        iconTheme: IconThemeData(color: Colors.white), // Set back arrow icon color to white
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                _usageDetails,
-                style: TextStyle(color: Colors.white), // Set text color to white
-              ),
+      body: ListView.builder(
+        itemCount: usageDetails.length,
+        itemBuilder: (context, index) {
+          final detail = usageDetails[index];
+          return ListTile(
+            title: Text(
+              detail.packageName,
+              style: TextStyle(color: Colors.white),
             ),
-            _iconBase64.isEmpty ? Icon(Icons.error_outline, color: Colors.white) : buildIcon(_iconBase64), // Display the icon with white color
-          ],
-        ),
+            subtitle: Text(
+              'Last used: ${detail.lastTimeUsed}\nTotal foreground time: ${detail.formattedTotalTime}',
+              style: TextStyle(color: Colors.white),
+            ),
+            trailing: Icon(Icons.flutter_dash), // Display the Flutter Dash icon
+          );
+        },
       ),
     );
   }
