@@ -115,7 +115,7 @@ class MainActivity: FlutterActivity() {
     }
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-    private fun getAppUsageStats(): List<Map<String, Any>> {
+    private fun getAppUsageStatsS(): List<Map<String, Any>> {
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val endTime = System.currentTimeMillis()
         val beginTime = endTime - 1000 * 60 * 60 * 24 * 365 // Last year
